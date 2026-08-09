@@ -898,7 +898,6 @@ function exportInventoryToCsv() {
   const headers = [
     "快递单号",
     "IMEI",
-    "UPC",
     "型号",
     "颜色",
     "容量",
@@ -910,7 +909,6 @@ function exportInventoryToCsv() {
   const dataRows = phones.map((phone) => [
     phone.tracking,
     phone.imei,
-    phone.upc,
     phone.model,
     phone.color,
     phone.capacity,
