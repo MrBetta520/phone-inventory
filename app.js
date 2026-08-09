@@ -220,14 +220,26 @@ function formatDateTime(dateValue) {
     return "";
   }
 
-  return date.toLocaleString("zh-CN", {
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     hour12: false,
-  });
+  }).format(date);
 }
 
 
 function getLocalDateKey(dateValue = new Date()) {
-  return new Date(dateValue).toLocaleDateString("zh-CN");
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(dateValue));
 }
 
 
