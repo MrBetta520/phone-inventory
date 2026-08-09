@@ -4,7 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>手机仓库库存管理</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260809-4">
+  <style>
+    #saveAdjustmentBtn {
+      grid-column: 1 / -1 !important;
+      display: block !important;
+      width: 100% !important;
+      min-height: 46px !important;
+      background: #2359d6 !important;
+      color: #fff !important;
+      border: 0 !important;
+      border-radius: 8px !important;
+      padding: 13px 16px !important;
+      font-size: 15px !important;
+      font-weight: bold !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+    }
+    #saveAdjustmentBtn:hover { background: #1747b8 !important; }
+  </style>
 </head>
 <body>
 <aside>
@@ -65,7 +83,7 @@
         <label>操作<select id="adjustType"><option value="initial">期初库存</option><option value="increase">增加库存</option><option value="decrease">减少库存</option></select></label>
         <label>数量<input id="adjustQuantity" type="number" min="1" step="1" required></label>
         <label class="wide">备注<input id="adjustNote" placeholder="选填，例如：系统启用前库存"></label>
-        <button type="submit">保存调整</button>
+        <button id="saveAdjustmentBtn" type="submit">确认并加入库存总表</button>
       </form>
       <p id="adjustMessage" class="muted"></p>
     </div>
@@ -80,8 +98,9 @@
   </section>
 </main>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=20260809-4"></script>
 </body>
 </html>
+
 
 
