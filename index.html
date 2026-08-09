@@ -4,8 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>手机仓库库存管理</title>
-  <link rel="stylesheet" href="styles.css?v=20260809-4">
+  <link rel="stylesheet" href="styles.css?v=20260809-5">
   <style>
+    /* 内容区所有操作按钮使用独立强制样式，避免旧缓存或浏览器样式变成白底白字 */
+    main button:not(.delete), main .import {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-height: 42px !important;
+      background-color: #2359d6 !important;
+      color: #ffffff !important;
+      border: 0 !important;
+      border-radius: 8px !important;
+      padding: 11px 17px !important;
+      font-weight: 700 !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      cursor: pointer !important;
+    }
+    main button.secondary { background-color: #52657c !important; }
+    #productForm button {
+      min-width: 110px !important;
+      white-space: nowrap !important;
+    }
+    .product-list .import {
+      position: relative !important;
+      min-width: 100px !important;
+    }
     #saveAdjustmentBtn {
       grid-column: 1 / -1 !important;
       display: block !important;
