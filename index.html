@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>手机仓库库存管理</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<aside><h2>▦ PhoneStock</h2><small>手机仓库管理</small><nav>
+  <button data-view="receive" class="active">入库扫码</button><button data-view="stock">当前库存</button>
+  <button data-view="ship">出库管理</button><button data-view="products">UPC 型号库</button>
+</nav><p class="saved">● 数据自动保存在本机</p></aside>
+<main><header><div><h1 id="title">入库扫码</h1><p id="subtitle">按顺序扫描三个条码，系统会自动跳到下一栏</p></div><button id="export">导出 Excel</button></header>
+<section class="metrics"><article>当前库存<strong id="stockCount">0</strong>部手机</article><article>今日入库<strong id="todayCount">0</strong>部手机</article><article>累计出库<strong id="shippedCount">0</strong>部手机</article><article>型号数量<strong id="modelCount">0</strong>种配置</article></section>
+<section id="receive" class="view active"><div class="card"><h3>● 连续扫码模式 <small>扫描后按回车进入下一项</small></h3><div class="scan-grid">
+  <label><b>1 快递单号</b><input id="tracking" placeholder="扫描 Tracking Number" autocomplete="off"></label>
+  <label><b>2 手机 IMEI</b><input id="imei" placeholder="扫描 IMEI 条码" autocomplete="off"></label>
+  <label><b>3 手机 UPC</b><input id="upc" placeholder="扫描 UPC 自动识别" autocomplete="off"></label>
+</div><footer><span id="message">请先扫描快递单号</span><button id="receiveBtn">确认入库</button></footer></div><div class="two"><div class="card"><h3>库存构成</h3><div id="stats"></div></div><div class="card"><h3>最近入库</h3><div id="recent"></div></div></div></section>
+<section id="stock" class="view"><div class="card"><input class="search" placeholder="搜索快递单号、IMEI、型号…"><div class="table" id="stockTable"></div></div></section>
+<section id="ship" class="view"><div class="card"><input class="search" placeholder="搜索快递单号、IMEI、型号…"><div class="table" id="shipTable"></div></div></section>
+<section id="products" class="view"><div class="card"><h3>添加 / 更新 UPC</h3><form id="productForm"><input id="pUpc" placeholder="UPC 条码" required><input id="pModel" placeholder="手机型号" required><input id="pColor" placeholder="颜色" required><input id="pCapacity" placeholder="容量" required><button>保存型号</button></form></div><div class="card product-list"><header><h3>已有型号</h3><label class="import">导入 CSV<input id="csvImport" type="file" accept=".csv"></label></header><p>CSV 第一行：UPC,型号,颜色,容量</p><div class="table" id="productTable"></div></div></section>
+</main><script src="app.js"></script></body></html>
