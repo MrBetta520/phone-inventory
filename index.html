@@ -20,4 +20,4 @@
 <section id="stock" class="view"><div class="card"><input class="search" placeholder="搜索快递单号、IMEI、型号…"><div class="table" id="stockTable"></div></div></section>
 <section id="ship" class="view"><div class="card"><input class="search" placeholder="搜索快递单号、IMEI、型号…"><div class="table" id="shipTable"></div></div></section>
 <section id="products" class="view"><div class="card"><h3>添加 / 更新 UPC</h3><form id="productForm"><input id="pUpc" placeholder="UPC 条码" required><input id="pModel" placeholder="手机型号" required><input id="pColor" placeholder="颜色" required><input id="pCapacity" placeholder="容量" required><button>保存型号</button></form></div><div class="card product-list"><header><h3>已有型号</h3><label class="import">导入 CSV<input id="csvImport" type="file" accept=".csv"></label></header><p>CSV 第一行：UPC,型号,颜色,容量</p><div class="table" id="productTable"></div></div></section>
-</main><script src="app.js"></script></body></html>
+</main><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="app.js"></script></body></html>

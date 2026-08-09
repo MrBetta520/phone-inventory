@@ -895,6 +895,11 @@ function escapeCsvValue(value) {
 
 
 function exportInventoryToCsv() {
+  if (typeof XLSX === "undefined") {
+    alert("Excel 导出组件加载失败，请检查网络后刷新页面。");
+    return;
+  }
+
   const headers = [
     "快递单号",
     "IMEI",
@@ -907,43 +912,50 @@ function exportInventoryToCsv() {
   ];
 
   const dataRows = phones.map((phone) => [
-    phone.tracking,
-    phone.imei,
-    phone.model,
-    phone.color,
-    phone.capacity,
-    phone.status,
+    String(phone.tracking || ""),
+    String(phone.imei || ""),
+    phone.model || "",
+    phone.color || "",
+    phone.capacity || "",
+    phone.status || "",
     formatDateTime(phone.receivedAt),
     phone.shippedAt
       ? formatDateTime(phone.shippedAt)
       : "",
   ]);
 
-  const csvContent = [headers, ...dataRows]
-    .map((row) => {
-      return row.map(escapeCsvValue).join(",");
-    })
-    .join("\r\n");
+  const worksheet = XLSX.utils.aoa_to_sheet([
+    headers,
+    ...dataRows,
+  ]);
 
-  const csvBlob = new Blob(
-    [`\uFEFF${csvContent}`],
-    {
-      type: "text/csv;charset=utf-8",
-    }
+  worksheet["!cols"] = [
+    { wch: 24 }, // 快递单号
+    { wch: 20 }, // IMEI
+    { wch: 22 }, // 型号
+    { wch: 14 }, // 颜色
+    { wch: 12 }, // 容量
+    { wch: 12 }, // 状态
+    { wch: 22 }, // 入库时间
+    { wch: 22 }, // 出库时间
+  ];
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "手机库存"
   );
 
-  const downloadUrl = URL.createObjectURL(csvBlob);
-  const downloadLink = document.createElement("a");
+  const fileDate = new Date()
+    .toISOString()
+    .slice(0, 10);
 
-  downloadLink.href = downloadUrl;
-  downloadLink.download =
-    `手机库存_${new Date().toISOString().slice(0, 10)}.csv`;
-
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  downloadLink.remove();
-
-  URL.revokeObjectURL(downloadUrl);
+  XLSX.writeFile(
+    workbook,
+    `手机库存_${fileDate}.xlsx`
+  );
 }
 
 
