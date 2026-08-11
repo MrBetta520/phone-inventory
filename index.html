@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>手机仓库库存管理</title>
-  <link rel="stylesheet" href="styles.css?v=20260809-v9">
+  <link rel="stylesheet" href="styles.css?v=20260811-v10">
   <style>
     /* 内容区所有操作按钮使用独立强制样式，避免旧缓存或浏览器样式变成白底白字 */
     main button:not(.delete), main .import {
@@ -60,11 +60,11 @@
     <button data-view="ship">出库管理</button>
     <button data-view="products">UPC 型号库</button>
   </nav>
-  <p class="saved">● Excel 文件保存模式<br><strong>版本：数据文件版 V9</strong></p>
+  <p class="saved">● Excel 文件保存模式<br><strong>版本：今日明细版 V10</strong></p>
 </aside>
 <main>
   <header class="page-header">
-    <div><h1 id="title">入库扫码</h1><p id="subtitle">选择客户后，按顺序扫描三个条码</p><span style="display:inline-block;margin-top:7px;padding:4px 9px;border-radius:12px;background:#e7efff;color:#2359d6;font-size:12px;font-weight:bold">数据文件版 V9</span></div>
+    <div><h1 id="title">入库扫码</h1><p id="subtitle">选择客户后，按顺序扫描三个条码</p><span style="display:inline-block;margin-top:7px;padding:4px 9px;border-radius:12px;background:#e7efff;color:#2359d6;font-size:12px;font-weight:bold">今日明细版 V10</span></div>
     <button id="exportAll">导出全部逐台记录</button>
   </header>
   <section class="file-bar" id="fileBar">
@@ -128,6 +128,6 @@
   </section>
 </main>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="app.js?v=20260809-v9"></script>
+<script src="app.js?v=20260811-v10"></script>
 </body>
 </html>
