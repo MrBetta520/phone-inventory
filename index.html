@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>手机仓库库存管理</title>
-  <link rel="stylesheet" href="styles.css?v=20260811-v10">
+  <link rel="stylesheet" href="styles.css?v=20260811-v11">
   <style>
     /* 内容区所有操作按钮使用独立强制样式，避免旧缓存或浏览器样式变成白底白字 */
     main button:not(.delete), main .import {
@@ -47,6 +47,9 @@
       cursor: pointer !important;
     }
     #saveAdjustmentBtn:hover { background: #1747b8 !important; }
+    .ship-scan-row { display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:14px;align-items:end; }
+    .ship-scan-row label b { display:block;margin-bottom:8px; }
+    @media(max-width:850px) { .ship-scan-row { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -60,12 +63,12 @@
     <button data-view="ship">出库管理</button>
     <button data-view="products">UPC 型号库</button>
   </nav>
-  <p class="saved">● Excel 文件保存模式<br><strong>版本：今日明细版 V10</strong></p>
+  <p class="saved">● Excel 文件保存模式<br><strong>版本：出入库明细版 V11</strong></p>
 </aside>
 <main>
   <header class="page-header">
-    <div><h1 id="title">入库扫码</h1><p id="subtitle">选择客户后，按顺序扫描三个条码</p><span style="display:inline-block;margin-top:7px;padding:4px 9px;border-radius:12px;background:#e7efff;color:#2359d6;font-size:12px;font-weight:bold">今日明细版 V10</span></div>
-    <button id="exportAll">导出全部逐台记录</button>
+    <div><h1 id="title">入库扫码</h1><p id="subtitle">选择客户后，按顺序扫描三个条码</p><span style="display:inline-block;margin-top:7px;padding:4px 9px;border-radius:12px;background:#e7efff;color:#2359d6;font-size:12px;font-weight:bold">出入库明细版 V11</span></div>
+    <button id="exportInStockDetails">导出全部在库明细</button>
   </header>
   <section class="file-bar" id="fileBar">
     <div><strong id="fileStatus">尚未连接库存数据文件</strong><small id="fileHint">请先创建新文件，或打开以前保存的 Excel 文件</small></div>
@@ -121,13 +124,27 @@
   </section>
 
   <section id="stock" class="view"><div class="card"><input id="stockSearch" class="search" placeholder="搜索客户、快递单号、IMEI、型号…"><div class="table" id="stockTable"></div></div></section>
-  <section id="ship" class="view"><div class="card"><input id="shipSearch" class="search" placeholder="搜索客户、快递单号、IMEI、型号…"><div class="table" id="shipTable"></div></div></section>
+  <section id="ship" class="view">
+    <div class="card">
+      <h3>扫描 IMEI 出库 <small>自动匹配入库时的手机详情</small></h3>
+      <div class="ship-scan-row">
+        <label><b>手机 IMEI</b><input id="shipImei" placeholder="扫描 IMEI 后按回车" autocomplete="off"></label>
+        <button id="shipScanBtn">确认出库</button>
+      </div>
+      <p id="shipMessage" class="muted">请扫描需要出库手机的 IMEI</p>
+    </div>
+    <div class="card toolbar">
+      <label>导出客户<select id="shipCustomerFilter"><option value="">请选择客户</option></select></label>
+      <button id="exportCustomerShippedToday">导出所选客户今日出库</button>
+    </div>
+    <div class="card"><input id="shipSearch" class="search" placeholder="搜索当前在库手机：客户、快递单号、IMEI、型号…"><div class="table" id="shipTable"></div></div>
+  </section>
   <section id="products" class="view">
     <div class="card"><h3>添加 / 更新 UPC</h3><form id="productForm"><input id="pUpc" placeholder="UPC 条码" required><input id="pModel" placeholder="手机型号" required><input id="pColor" placeholder="颜色" required><input id="pCapacity" placeholder="容量" required><button>保存型号</button></form></div>
     <div class="card product-list"><header><h3>已有型号</h3><label class="import">导入 CSV<input id="csvImport" type="file" accept=".csv"></label></header><p>CSV 第一行：UPC,型号,颜色,容量</p><div class="table" id="productTable"></div></div>
   </section>
 </main>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="app.js?v=20260811-v10"></script>
+<script src="app.js?v=20260811-v11"></script>
 </body>
 </html>
