@@ -1,0 +1,14 @@
+{
+  "name": "PhoneStock 手机仓库库存管理",
+  "short_name": "PhoneStock",
+  "description": "手机仓库入库、出库、库存与历史管理",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#102043",
+  "icons": [
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

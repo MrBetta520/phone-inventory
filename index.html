@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102043">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PhoneStock">
+  <title>手机仓库库存管理</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* 内容区所有操作按钮使用独立强制样式，避免旧缓存或浏览器样式变成白底白字 */
+    main button:not(.delete), main .import {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-height: 42px !important;
+      background-color: #2359d6 !important;
+      color: #ffffff !important;
+      border: 0 !important;
+      border-radius: 8px !important;
+      padding: 11px 17px !important;
+      font-weight: 700 !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      cursor: pointer !important;
+    }
+    main button.secondary { background-color: #52657c !important; }
+    #productForm button {
+      min-width: 110px !important;
+      white-space: nowrap !important;
+    }
+    .product-list .import {
+      position: relative !important;
+      min-width: 100px !important;
+    }
+    #saveAdjustmentBtn {
+      grid-column: 1 / -1 !important;
+      display: block !important;
+      width: 100% !important;
+      min-height: 46px !important;
+      background: #2359d6 !important;
+      color: #fff !important;
+      border: 0 !important;
+      border-radius: 8px !important;
+      padding: 13px 16px !important;
+      font-size: 15px !important;
+      font-weight: bold !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+    }
+    #saveAdjustmentBtn:hover { background: #1747b8 !important; }
+    .ship-scan-row { display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:14px;align-items:end; }
+    .ship-scan-row.ship-code-row { grid-template-columns:minmax(220px,.9fr) minmax(260px,1.1fr) 130px; }
+    .ship-scan-row label b { display:block;margin-bottom:8px; }
+    .manage-grid { display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1fr);gap:18px; }
+    .inline-form { display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end; }
+    .chip-list { display:flex;flex-wrap:wrap;gap:8px;margin-top:14px; }
+    .chip { display:inline-flex;align-items:center;gap:7px;background:#eef3fb;border:1px solid #d5dfed;border-radius:18px;padding:6px 10px; }
+    .chip button { min-height:24px!important;padding:2px 7px!important;background:#bf2b36!important; }
+    .danger { background:#bf2b36!important; }
+    @media(max-width:850px) { .ship-scan-row, .ship-scan-row.ship-code-row { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<aside>
+  <h2>▦ PhoneStock</h2><small>手机仓库管理</small>
+  <nav>
+    <button data-view="receive" class="active">入库扫码</button>
+    <button data-view="inventory">库存与历史</button>
+    <button data-view="adjust">期初 / 调整库存</button>
+    <button data-view="ship">出库管理</button>
+    <button data-view="products">UPC 型号库</button>
+    <button data-view="data">数据与客户</button>
+  </nav>
+  <p class="saved save-busy" id="saveState">● 正在读取浏览器数据…</p>
+</aside>
+<main>
+  <header class="page-header">
+    <div><h1 id="title">入库扫码</h1><p id="subtitle">入库码选填；IMEI 必填且全系统唯一；UPC 必填</p></div>
+    <button id="exportInStockDetails">导出全部在库明细</button>
+  </header>
+  <section class="metrics">
+    <article>当前总库存<strong id="stockCount">0</strong>部手机</article>
+    <article>今日扫码入库<strong id="todayCount">0</strong>部手机</article>
+    <article>累计扫码出库<strong id="shippedCount">0</strong>部手机</article>
+    <article>库存配置<strong id="modelCount">0</strong>种</article>
+  </section>
+
+  <section id="receive" class="view active">
+    <div class="card">
+      <h3>● 连续扫码模式 <small>客户为必选项</small></h3>
+      <div class="scan-grid four">
+        <label><b>客户</b><select id="receiveCustomer"><option value="">请选择客户</option></select></label>
+        <label><b>1 入库码（选填）</b><input id="inboundCode" placeholder="可扫描，也可按 Enter 跳过" autocomplete="off"></label>
+        <label><b>2 手机 IMEI（必填且唯一）</b><input id="imei" placeholder="扫描 IMEI 条码" autocomplete="off"></label>
+        <label><b>3 手机 UPC</b><input id="upc" placeholder="扫描 UPC 自动识别" autocomplete="off"></label>
+      </div>
+      <footer><span id="message">请先选择客户</span><button id="receiveBtn">确认入库</button></footer>
+    </div>
+    <div class="two"><div class="card"><h3>库存构成</h3><div id="stats"></div></div><div class="card"><h3>最近入库</h3><div id="recent"></div></div></div>
+  </section>
+
+  <section id="inventory" class="view">
+    <div class="card inventory-controls">
+      <label>客户<select id="inventoryCustomerFilter"><option value="">全部客户</option></select></label>
+      <label>查看内容<select id="inventoryMode"><option value="current">当前库存汇总</option><option value="today">今日出入库</option><option value="date">按日期查询</option><option value="history">全部逐台历史</option></select></label>
+      <label id="inventoryDateWrap" hidden>日期<input id="inventoryDate" type="date"></label>
+      <label class="inventory-search">搜索<input id="inventorySearch" placeholder="搜索客户、型号、颜色、入库码、出库码、IMEI…"></label>
+      <button id="exportInventoryCurrent">导出当前显示</button>
+    </div>
+    <div id="inventoryDailyOverview" class="card" hidden>
+      <h3 id="inventoryDailyTitle">所选日期出入库统计</h3>
+      <div class="history-metrics"><article>扫码入库<strong id="dailyReceivedCount">0</strong>部</article><article>扫码出库<strong id="dailyShippedCount">0</strong>部</article><article>期初 / 手动增加<strong id="dailyAddedCount">0</strong>部</article><article>手动减少<strong id="dailyReducedCount">0</strong>部</article><article>库存净变化<strong id="dailyNetCount">0</strong>部</article></div>
+    </div>
+    <div id="inventoryHistoryOverview" class="card history-overview" hidden>
+      <h3>历史扫码统计</h3><p class="muted">只统计有 IMEI 的逐台记录，不包含期初库存和手动调整。</p>
+      <div class="history-metrics"><article>历史扫码入库<strong id="historyReceivedCount">0</strong>部</article><article>历史扫码出库<strong id="historyShippedCount">0</strong>部</article><article>当前扫码在库<strong id="historyInStockCount">0</strong>部</article><article>历史型号<strong id="historyModelCount">0</strong>种</article><article>历史配置<strong id="historyConfigCount">0</strong>种</article></div>
+    </div>
+    <div id="inventoryTypeCard" class="card" hidden><h3>按型号、颜色和容量汇总</h3><div class="table record-table" id="historyTypeTable" data-max-rows="10"></div></div>
+    <div class="card"><h3 id="inventoryTableTitle">当前库存汇总</h3><p id="inventoryTableHelp" class="muted inventory-help"></p><div class="table record-table wide-record-table" id="inventoryTable"></div></div>
+  </section>
+
+  <section id="adjust" class="view">
+    <div class="card">
+      <h3>录入期初库存 / 手动调整</h3>
+      <form id="adjustmentForm" class="form-grid">
+        <label>客户<select id="adjustCustomer" required><option value="">请选择客户</option></select></label>
+        <label>型号<select id="adjustModel" required><option value="">请先选择型号</option></select></label>
+        <label>颜色<select id="adjustColor" required disabled><option value="">请先选择型号</option></select></label>
+        <label>容量<select id="adjustCapacity" required disabled><option value="">请先选择颜色</option></select></label>
+        <label>操作<select id="adjustType"><option value="initial">期初库存</option><option value="increase">增加库存</option><option value="decrease">减少库存</option></select></label>
+        <label>数量<input id="adjustQuantity" type="number" min="1" step="1" required></label>
+        <label class="wide">备注<input id="adjustNote" placeholder="选填，例如：系统启用前库存"></label>
+        <button id="saveAdjustmentBtn" type="submit">确认并加入库存总表</button>
+      </form>
+      <p id="adjustMessage" class="muted"></p>
+    </div>
+    <div class="card"><h3>调整记录</h3><div class="table record-table" id="adjustmentTable"></div></div>
+  </section>
+
+  <section id="ship" class="view">
+    <div class="card">
+      <h3>连续扫描 IMEI 出库 <small>出库码选填；填写后可关联多台手机</small></h3>
+      <div class="ship-scan-row ship-code-row">
+        <label><b>出库码（选填，手动输入）</b><input id="outboundCode" placeholder="可留空；填写后用于本批次" autocomplete="off"></label>
+        <label><b>手机 IMEI</b><input id="shipImei" placeholder="扫描 IMEI 后按回车" autocomplete="off"></label>
+        <button id="shipScanBtn">确认出库</button>
+      </div>
+      <p id="shipMessage" class="muted">出库码可以留空；填写后会保留，并关联后续连续扫描的 IMEI。</p>
+    </div>
+    <div class="card toolbar">
+      <label>导出客户<select id="shipCustomerFilter"><option value="">请选择客户</option></select></label>
+      <button id="exportCustomerShippedToday">导出所选客户今日出库</button>
+    </div>
+    <div class="card"><div class="recent-ship-header"><div><h3>今日最近出库</h3><p class="muted">成功记录不会被下一次扫描提示覆盖。</p></div><strong>今日已扫码出库 <span id="recentShippedCount">0</span> 台</strong></div><div class="table record-table wide-record-table" id="recentShipTable" data-max-rows="14"></div></div>
+  </section>
+  <section id="products" class="view">
+    <div class="card"><h3>添加 / 更新 UPC</h3><form id="productForm"><input id="pUpc" placeholder="UPC 条码" required><input id="pModel" placeholder="手机型号" required><input id="pColor" placeholder="颜色，例如：深蓝色" required><input id="pCapacity" placeholder="容量" required><label class="color-field">标签背景<input id="pLabelBg" type="color" value="#e7efff"></label><label class="color-field">文字颜色<input id="pLabelText" type="color" value="#17315f"></label><button id="autoProductColors" type="button" class="secondary">自动配色</button><span id="productColorPreview" class="phone-badge">颜色预览</span><button type="submit">保存型号</button></form></div>
+    <div class="card product-list"><header><h3>已有型号</h3><label class="import">导入 CSV<input id="csvImport" type="file" accept=".csv"></label></header><p>CSV 第一行：UPC,型号,颜色,容量；背景色和文字色可以在软件中自定义。</p><div class="table record-table" id="productTable"></div></div>
+  </section>
+
+  <section id="data" class="view">
+    <div class="card">
+      <h3>客户名单</h3>
+      <div class="inline-form"><label>新增客户<input id="newCustomer" placeholder="输入客户名称"></label><button id="addCustomer">添加客户</button></div>
+      <div id="customerList" class="chip-list"></div>
+    </div>
+    <div class="card">
+      <h3>数据导入与导出</h3>
+      <p>导入仅接受完整 JSON 备份，并与当前数据自动合并，不会覆盖或删除当前数据。</p>
+      <div class="data-actions">
+        <button id="importData" class="secondary">导入数据</button>
+        <details id="exportMenu" class="export-menu">
+          <summary>导出数据 ▾</summary>
+          <div class="export-options">
+            <button id="backupData">完整备份 JSON</button>
+            <button id="exportDailyLedger" class="secondary">Excel 每日台账</button>
+          </div>
+        </details>
+      </div>
+      <div id="importSummary" class="import-summary" hidden></div>
+    </div>
+    <div class="card" style="border:1px solid #efb7bc">
+      <h3>Reset 恢复初始状态</h3>
+      <p>删除客户、库存、逐台出入库和调整记录，但保留 UPC 型号库中的全部资料，包括软件预设和后来添加的 UPC。重置前会自动下载完整 JSON 备份。</p>
+      <button id="resetData" class="danger">Reset 客户和库存数据</button>
+    </div>
+  </section>
+</main>
+<script src="web-bridge.js"></script>
+<script src="data-utils.js"></script>
+<script src="app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js"));
+</script>
+</body>
+</html>
