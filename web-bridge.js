@@ -8,7 +8,7 @@
   const normalizeData = value => {
     const source=value&&typeof value==="object"?value:{};
     return {
-      version:2,
+      version:Number(source.version)||2,
       customers:Array.isArray(source.customers)?source.customers:[],
       products:Array.isArray(source.products)?source.products:[],
       phones:Array.isArray(source.phones)?source.phones:[],

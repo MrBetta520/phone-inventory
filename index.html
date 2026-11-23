@@ -11,6 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles-web.css">
   <style>
     /* 内容区所有操作按钮使用独立强制样式，避免旧缓存或浏览器样式变成白底白字 */
     main button:not(.delete), main .import {
@@ -70,17 +71,18 @@
   <h2>▦ PhoneStock</h2><small>手机仓库管理</small>
   <nav>
     <button data-view="receive" class="active">入库扫码</button>
+    <button data-view="batches">今日入库批次</button>
     <button data-view="inventory">库存与历史</button>
     <button data-view="adjust">期初 / 调整库存</button>
     <button data-view="ship">出库管理</button>
     <button data-view="products">UPC 型号库</button>
     <button data-view="data">数据与客户</button>
   </nav>
-  <p class="saved save-busy" id="saveState">● 正在读取浏览器数据…</p>
+  <p class="saved save-busy" id="saveState">● 正在读取本地数据…</p>
 </aside>
 <main>
   <header class="page-header">
-    <div><h1 id="title">入库扫码</h1><p id="subtitle">入库码选填；IMEI 必填且全系统唯一；UPC 必填</p></div>
+    <div><h1 id="title">入库扫码</h1><p id="subtitle">入库码和箱号选填并保持；IMEI 与 UPC 连续循环扫描</p></div>
     <button id="exportInStockDetails">导出全部在库明细</button>
   </header>
   <section class="metrics">
@@ -93,23 +95,61 @@
   <section id="receive" class="view active">
     <div class="card">
       <h3>● 连续扫码模式 <small>客户为必选项</small></h3>
-      <div class="scan-grid four">
-        <label><b>客户</b><select id="receiveCustomer"><option value="">请选择客户</option></select></label>
-        <label><b>1 入库码（选填）</b><input id="inboundCode" placeholder="可扫描，也可按 Enter 跳过" autocomplete="off"></label>
-        <label><b>2 手机 IMEI（必填且唯一）</b><input id="imei" placeholder="扫描 IMEI 条码" autocomplete="off"></label>
-        <label><b>3 手机 UPC</b><input id="upc" placeholder="扫描 UPC 自动识别" autocomplete="off"></label>
+      <div class="scan-grid five">
+        <label class="scan-customer"><b>客户</b><select id="receiveCustomer"><option value="">请选择客户</option></select></label>
+        <label class="scan-inbound"><b>入库码（选填，手动输入）</b><input id="inboundCode" placeholder="可留空；填写后用于本批次" autocomplete="off"></label>
+        <label class="scan-box"><b>箱号（选填，手动输入）</b><input id="boxNumber" placeholder="可留空；填写后用于本箱" autocomplete="off"></label>
+        <label class="scan-imei"><b>1 手机 IMEI（必填且唯一）</b><input id="imei" placeholder="扫描 IMEI 条码" autocomplete="off"></label>
+        <label class="scan-upc"><b>2 手机 UPC</b><input id="upc" placeholder="扫描 UPC 自动识别" autocomplete="off"></label>
       </div>
       <footer><span id="message">请先选择客户</span><button id="receiveBtn">确认入库</button></footer>
     </div>
     <div class="two"><div class="card"><h3>库存构成</h3><div id="stats"></div></div><div class="card"><h3>最近入库</h3><div id="recent"></div></div></div>
   </section>
 
+  <section id="batches" class="view">
+    <div class="card batch-controls">
+      <label>客户<select id="batchCustomerFilter"><option value="">全部客户</option></select></label>
+      <label>入库码<select id="batchInboundFilter"><option value="">今天还没有入库码</option></select></label>
+      <label class="batch-search">搜索<input id="batchSearch" placeholder="搜索箱号、IMEI、型号、颜色、容量…"></label>
+      <button id="exportTodayBatches">导出今日按入库码汇总</button>
+    </div>
+    <div class="card">
+      <div class="batch-page-heading">
+        <div><h3>今日入库批次</h3><p class="muted">先选择入库码，再按箱号查看手机配置与 IMEI；扫码成功后立即更新。</p></div>
+        <strong id="batchTodayDate"></strong>
+      </div>
+      <div class="batch-metrics">
+        <article>箱号卡片<strong id="batchGroupCount">0</strong>个</article>
+        <article>扫码入库<strong id="batchPhoneCount">0</strong>部手机</article>
+        <article>手机配置<strong id="batchConfigCount">0</strong>种</article>
+      </div>
+    </div>
+    <div id="batchOverviewCard"></div>
+    <div id="batchCards" class="batch-card-list"></div>
+  </section>
+
   <section id="inventory" class="view">
     <div class="card inventory-controls">
       <label>客户<select id="inventoryCustomerFilter"><option value="">全部客户</option></select></label>
       <label>查看内容<select id="inventoryMode"><option value="current">当前库存汇总</option><option value="today">今日出入库</option><option value="date">按日期查询</option><option value="history">全部逐台历史</option></select></label>
-      <label id="inventoryDateWrap" hidden>日期<input id="inventoryDate" type="date"></label>
-      <label class="inventory-search">搜索<input id="inventorySearch" placeholder="搜索客户、型号、颜色、入库码、出库码、IMEI…"></label>
+      <label id="inventoryDateWrap" hidden>日期
+        <div class="marked-date-picker">
+          <input id="inventoryDate" type="hidden">
+          <button id="inventoryDateButton" type="button" aria-haspopup="dialog" aria-expanded="false"><span id="inventoryDateButtonText">选择日期</span><span>▾</span></button>
+          <div id="inventoryCalendar" class="inventory-calendar" role="dialog" aria-label="选择库存记录日期" hidden>
+            <div class="inventory-calendar-header">
+              <button id="inventoryCalendarPrev" class="calendar-nav" type="button" aria-label="上个月">‹</button>
+              <strong id="inventoryCalendarMonth"></strong>
+              <button id="inventoryCalendarNext" class="calendar-nav" type="button" aria-label="下个月">›</button>
+            </div>
+            <div class="inventory-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+            <div id="inventoryCalendarDays" class="inventory-calendar-days"></div>
+            <div class="inventory-calendar-legend"><i></i> 有扫码入库</div>
+          </div>
+        </div>
+      </label>
+      <label class="inventory-search">搜索<input id="inventorySearch" placeholder="搜索客户、型号、颜色、入库码、箱号、出库码、IMEI…"></label>
       <button id="exportInventoryCurrent">导出当前显示</button>
     </div>
     <div id="inventoryDailyOverview" class="card" hidden>
@@ -179,6 +219,7 @@
           <div class="export-options">
             <button id="backupData">完整备份 JSON</button>
             <button id="exportDailyLedger" class="secondary">Excel 每日台账</button>
+            <button id="exportTodayByInboundCode" class="secondary">今日入库（按入库码分组）</button>
           </div>
         </details>
       </div>
@@ -186,16 +227,19 @@
     </div>
     <div class="card" style="border:1px solid #efb7bc">
       <h3>Reset 恢复初始状态</h3>
-      <p>删除客户、库存、逐台出入库和调整记录，但保留 UPC 型号库中的全部资料，包括软件预设和后来添加的 UPC。重置前会自动下载完整 JSON 备份。</p>
+      <p>删除客户、库存、逐台出入库和调整记录，但保留 UPC 型号库中的全部资料，包括软件预设和后来添加的 UPC。重置前会在 data 文件夹中自动保存完整备份。</p>
       <button id="resetData" class="danger">Reset 客户和库存数据</button>
     </div>
   </section>
 </main>
 <script src="web-bridge.js"></script>
+<script src="virtual-keyboard.js"></script>
 <script src="data-utils.js"></script>
 <script src="app.js"></script>
 <script>
-  if ("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js"));
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(console.error));
+  }
 </script>
 </body>
 </html>
