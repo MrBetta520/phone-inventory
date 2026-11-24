@@ -12,7 +12,7 @@ const DEFAULT_PRODUCTS = [
   {upc:"195950638004",model:"iPhone 17 Pro Max",color:"橙色",capacity:"256GB"}
 ];
 const VIEW_CONTENT = {
-  receive:["入库扫码","入库码和箱号选填并保持；IMEI 与 UPC 连续循环扫描"],
+  receive:["入库扫码","入库码、箱号和经手人选填并保持；IMEI 与 UPC 连续循环扫描"],
   batches:["今日入库批次","实时查看今天每个入库码包含的手机配置、数量和 IMEI"],
   inventory:["库存与历史","按客户、日期或记录类型查看库存与完整出入库历史"],
   adjust:["期初 / 调整库存","录入旧库存或手动增加、减少数量"],
@@ -59,7 +59,8 @@ function compareStock(a,b) { return a.customer.localeCompare(b.customer,"zh-CN")
 function inboundCode(item) { return String(item?.inboundCode ?? item?.tracking ?? "").trim(); }
 function boxNumber(item) { return String(item?.boxNumber ?? item?.boxNo ?? "").trim(); }
 function outboundCode(item) { return String(item?.outboundCode ?? item?.shipCode ?? "").trim(); }
-function normalizePhoneCodes(item) { const normalized={...item,inboundCode:inboundCode(item),boxNumber:boxNumber(item),outboundCode:outboundCode(item)};delete normalized.tracking;delete normalized.boxNo;delete normalized.shipCode;return normalized; }
+function handledBy(item) { return String(item?.handledBy ?? item?.operator ?? "").trim(); }
+function normalizePhoneCodes(item) { const normalized={...item,inboundCode:inboundCode(item),boxNumber:boxNumber(item),outboundCode:outboundCode(item),handledBy:handledBy(item)};delete normalized.tracking;delete normalized.boxNo;delete normalized.shipCode;delete normalized.operator;return normalized; }
 function allData() { return {version:2,customers,products,phones,adjustments}; }
 function validHex(value) { return /^#[0-9a-f]{6}$/i.test(String(value||"")); }
 function automaticProductColors(color) {
@@ -158,7 +159,7 @@ function currentStock() {
 function quantityFor(item) { return currentStock().find(row => productKey(row) === productKey(item))?.quantity || 0; }
 function scannedToday(customer) { return phones.filter(phone => phone.customer === customer && dateKey(phone.receivedAt) === dateKey()); }
 function shippedToday(customer) { return phones.filter(phone => phone.customer === customer && phone.status === STATUS.SHIPPED && dateKey(phone.shippedAt) === dateKey()); }
-function searchText(phone) { return [phone.customer,inboundCode(phone),boxNumber(phone),outboundCode(phone),phone.imei,phone.upc,phone.model,phone.color,phone.capacity,phone.status,formatDate(phone.receivedAt),formatDate(phone.shippedAt)].join(" ").toLowerCase(); }
+function searchText(phone) { return [phone.customer,handledBy(phone),inboundCode(phone),boxNumber(phone),outboundCode(phone),phone.imei,phone.upc,phone.model,phone.color,phone.capacity,phone.status,formatDate(phone.receivedAt),formatDate(phone.shippedAt)].join(" ").toLowerCase(); }
 function batchConfigurationSummary(list) {
   const grouped=new Map();
   for(const phone of list){
@@ -240,12 +241,12 @@ function renderStats(stock) {
 function renderRecent() {
   const element=$("#recent"),list=phones.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt))).slice(0,6);
   if (!list.length) { element.innerHTML='<div class="empty">扫码入库后会显示在这里</div>'; return; }
-  element.innerHTML=list.map(phone=>`<div class="row"><span><b>${escapeHtml(phone.customer)}</b> ${phoneBadge(phone)}</span><small>${escapeHtml(String(phone.imei).slice(-6))}</small></div>`).join("");
+  element.innerHTML=list.map(phone=>`<div class="row"><span><b>${escapeHtml(phone.customer)}</b> ${phoneBadge(phone)}</span><small>${handledBy(phone)?`经手人：${escapeHtml(handledBy(phone))} · `:""}${escapeHtml(String(phone.imei).slice(-6))}</small></div>`).join("");
 }
 function renderRecentShipments() {
   const list=phones.filter(phone=>phone.status===STATUS.SHIPPED&&dateKey(phone.shippedAt)===dateKey()).sort((a,b)=>String(b.shippedAt).localeCompare(String(a.shippedAt)));
   $("#recentShippedCount").textContent=list.length;
-  $("#recentShipTable").innerHTML=list.length?`<table><thead><tr><th>出库时间</th><th>出库码</th><th>客户</th><th>手机</th><th>IMEI</th><th>入库码</th><th>箱号</th></tr></thead><tbody>${list.map(phone=>`<tr><td>${escapeHtml(formatDate(phone.shippedAt))}</td><td><b>${escapeHtml(outboundCode(phone))}</b></td><td><b>${escapeHtml(phone.customer)}</b></td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td><td>${escapeHtml(inboundCode(phone))}</td><td>${escapeHtml(boxNumber(phone))}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">今天还没有扫码出库记录</div>';
+  $("#recentShipTable").innerHTML=list.length?`<table><thead><tr><th>出库时间</th><th>出库码</th><th>客户</th><th>入库经手人</th><th>手机</th><th>IMEI</th><th>入库码</th><th>箱号</th></tr></thead><tbody>${list.map(phone=>`<tr><td>${escapeHtml(formatDate(phone.shippedAt))}</td><td><b>${escapeHtml(outboundCode(phone))}</b></td><td><b>${escapeHtml(phone.customer)}</b></td><td>${escapeHtml(handledBy(phone))}</td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td><td>${escapeHtml(inboundCode(phone))}</td><td>${escapeHtml(boxNumber(phone))}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">今天还没有扫码出库记录</div>';
 }
 function renderTodayBatches() {
   const customer=$("#batchCustomerFilter").value,query=$("#batchSearch").value;
@@ -268,21 +269,25 @@ function renderTodayBatches() {
     const customerTags=overviewCustomers.map(value=>`<span class="batch-customer">${escapeHtml(value)}</span>`).join("");
     const boxTags=overviewBoxes.map(value=>`<span class="batch-box-tag">${escapeHtml(value)}</span>`).join("");
     const configurationRows=overviewConfigurations.map(item=>`<tr><td>${phoneBadge(item)}</td><td><b>${item.quantity}</b></td></tr>`).join("");
-    const imeiRows=overviewPhones.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt))).map(phone=>`<tr><td>${escapeHtml(formatDate(phone.receivedAt))}</td><td>${escapeHtml(phone.customer||"未命名客户")}</td><td>${escapeHtml(boxNumber(phone)||"无箱号")}</td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td></tr>`).join("");
+    const overviewHandlers=uniqueSorted(overviewPhones.map(handledBy));
+    const handlerTags=(overviewHandlers.length?overviewHandlers:["未填写"]).map(value=>`<span class="batch-box-tag">${escapeHtml(value)}</span>`).join("");
+    const imeiRows=overviewPhones.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt))).map(phone=>`<tr><td>${escapeHtml(formatDate(phone.receivedAt))}</td><td>${escapeHtml(phone.customer||"未命名客户")}</td><td>${escapeHtml(handledBy(phone))}</td><td>${escapeHtml(boxNumber(phone)||"无箱号")}</td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td></tr>`).join("");
     $("#batchOverviewCard").innerHTML=`<article class="card batch-overview-card">
       <div class="batch-card-header"><div><span class="batch-overview-label">入库码总览</span><h3>${escapeHtml(selectedCode)}</h3></div><strong>${overviewPhones.length}<small> 部手机</small></strong></div>
-      <div class="batch-overview-meta"><div><b>客户</b><span>${customerTags}</span></div><div><b>箱号（${overviewGroups.length} 个卡片）</b><span>${boxTags}</span></div></div>
+      <div class="batch-overview-meta"><div><b>客户</b><span>${customerTags}</span></div><div><b>经手人</b><span>${handlerTags}</span></div><div><b>箱号（${overviewGroups.length} 个卡片）</b><span>${boxTags}</span></div></div>
       <div class="batch-summary-table batch-overview-summary"><table><thead><tr><th>全部手机配置</th><th>数量</th></tr></thead><tbody>${configurationRows}</tbody></table></div>
-      <details class="batch-imei-details"><summary>查看这个入库码的全部 ${overviewPhones.length} 个 IMEI</summary><div class="table record-table batch-overview-imei-table" data-max-rows="12"><table><thead><tr><th>入库时间</th><th>客户</th><th>箱号</th><th>手机</th><th>IMEI</th></tr></thead><tbody>${imeiRows}</tbody></table></div></details>
+      <details class="batch-imei-details"><summary>查看这个入库码的全部 ${overviewPhones.length} 个 IMEI</summary><div class="table record-table batch-overview-imei-table" data-max-rows="12"><table><thead><tr><th>入库时间</th><th>客户</th><th>经手人</th><th>箱号</th><th>手机</th><th>IMEI</th></tr></thead><tbody>${imeiRows}</tbody></table></div></details>
     </article>`;
   }else $("#batchOverviewCard").innerHTML="";
   $("#batchCards").innerHTML=groups.length?groups.map((group,index)=>{
     const configurationRows=group.configurations.map(item=>`<tr><td>${phoneBadge(item)}</td><td><b>${item.quantity}</b></td></tr>`).join("");
-    const imeiRows=group.phones.map(phone=>`<tr><td>${escapeHtml(formatDate(phone.receivedAt))}</td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td></tr>`).join("");
+    const groupHandlers=uniqueSorted(group.phones.map(handledBy));
+    const handlerText=groupHandlers.length?groupHandlers.join("、"):"未填写";
+    const imeiRows=group.phones.map(phone=>`<tr><td>${escapeHtml(formatDate(phone.receivedAt))}</td><td>${escapeHtml(handledBy(phone))}</td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td></tr>`).join("");
     return `<article class="card batch-card">
-      <div class="batch-card-header"><div><span class="batch-customer">${escapeHtml(group.customer)}</span><span class="batch-code-tag">入库码：${escapeHtml(group.code)}</span><h3>箱号：${escapeHtml(group.box)}</h3></div><strong>${group.phones.length}<small> 部手机</small></strong></div>
+      <div class="batch-card-header"><div><span class="batch-customer">${escapeHtml(group.customer)}</span><span class="batch-code-tag">入库码：${escapeHtml(group.code)}</span><h3>箱号：${escapeHtml(group.box)}</h3><small class="muted">经手人：${escapeHtml(handlerText)}</small></div><strong>${group.phones.length}<small> 部手机</small></strong></div>
       <div class="batch-summary-table"><table><thead><tr><th>手机配置</th><th>数量</th></tr></thead><tbody>${configurationRows}</tbody></table></div>
-      <details class="batch-imei-details" ${groups.length===1&&index===0?"open":""}><summary>查看全部 ${group.phones.length} 个 IMEI</summary><div class="table record-table batch-imei-table" data-max-rows="9"><table><thead><tr><th>入库时间</th><th>手机</th><th>IMEI</th></tr></thead><tbody>${imeiRows}</tbody></table></div></details>
+      <details class="batch-imei-details" ${groups.length===1&&index===0?"open":""}><summary>查看全部 ${group.phones.length} 个 IMEI</summary><div class="table record-table batch-imei-table" data-max-rows="9"><table><thead><tr><th>入库时间</th><th>经手人</th><th>手机</th><th>IMEI</th></tr></thead><tbody>${imeiRows}</tbody></table></div></details>
     </article>`;
   }).join(""):`<div class="card empty">${codes.length?"这个入库码下没有符合搜索条件的记录":"今天还没有符合条件的扫码入库记录"}</div>`;
   $$(".batch-imei-details").forEach(details=>details.ontoggle=()=>requestAnimationFrame(resizeDynamicTables));
@@ -290,7 +295,7 @@ function renderTodayBatches() {
 }
 function phoneTable(items) {
   if (!items.length) return '<div class="empty">没有符合条件的记录</div>';
-  return `<table><thead><tr><th>客户</th><th>手机</th><th>IMEI</th><th>入库码</th><th>箱号</th><th>出库码</th><th>状态</th><th>入库时间</th><th>出库时间</th></tr></thead><tbody>${items.map(phone=>`<tr><td><b>${escapeHtml(phone.customer)}</b></td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td><td>${escapeHtml(inboundCode(phone))}</td><td>${escapeHtml(boxNumber(phone))}</td><td>${escapeHtml(outboundCode(phone))}</td><td><span class="tag ${phone.status===STATUS.SHIPPED?"shipped":""}">${escapeHtml(phone.status)}</span></td><td>${escapeHtml(formatDate(phone.receivedAt))}</td><td>${phone.status===STATUS.SHIPPED?escapeHtml(formatDate(phone.shippedAt)):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table>`;
+  return `<table><thead><tr><th>客户</th><th>经手人</th><th>手机</th><th>IMEI</th><th>入库码</th><th>箱号</th><th>出库码</th><th>状态</th><th>入库时间</th><th>出库时间</th></tr></thead><tbody>${items.map(phone=>`<tr><td><b>${escapeHtml(phone.customer)}</b></td><td>${escapeHtml(handledBy(phone))}</td><td>${phoneBadge(phone)}</td><td>${escapeHtml(phone.imei)}</td><td>${escapeHtml(inboundCode(phone))}</td><td>${escapeHtml(boxNumber(phone))}</td><td>${escapeHtml(outboundCode(phone))}</td><td><span class="tag ${phone.status===STATUS.SHIPPED?"shipped":""}">${escapeHtml(phone.status)}</span></td><td>${escapeHtml(formatDate(phone.receivedAt))}</td><td>${phone.status===STATUS.SHIPPED?escapeHtml(formatDate(phone.shippedAt)):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table>`;
 }
 function renderHistorySummary(list) {
   const shipped=list.filter(phone=>phone.status===STATUS.SHIPPED).length;
@@ -310,19 +315,19 @@ function renderHistorySummary(list) {
 }
 
 function inventorySearchText(item) {
-  return [item.type,item.customer,inboundCode(item),boxNumber(item),outboundCode(item),item.imei,item.model,item.color,item.capacity,item.status,item.note,item.quantity,formatDate(item.timestamp||item.receivedAt),formatDate(item.shippedAt)].join(" ").toLowerCase();
+  return [item.type,item.customer,handledBy(item),inboundCode(item),boxNumber(item),outboundCode(item),item.imei,item.model,item.color,item.capacity,item.status,item.note,item.quantity,formatDate(item.timestamp||item.receivedAt),formatDate(item.shippedAt)].join(" ").toLowerCase();
 }
 function dailyActivity(customer,date) {
   const events=[];
   for(const phone of phones){
-    if((!customer||phone.customer===customer)&&dateKey(phone.receivedAt)===date)events.push({type:"扫码入库",timestamp:phone.receivedAt,customer:phone.customer,inboundCode:inboundCode(phone),boxNumber:boxNumber(phone),outboundCode:"",imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:1,phone});
-    if((!customer||phone.customer===customer)&&phone.status===STATUS.SHIPPED&&dateKey(phone.shippedAt)===date)events.push({type:"扫码出库",timestamp:phone.shippedAt,customer:phone.customer,inboundCode:inboundCode(phone),boxNumber:boxNumber(phone),outboundCode:outboundCode(phone),imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:-1,phone});
+    if((!customer||phone.customer===customer)&&dateKey(phone.receivedAt)===date)events.push({type:"扫码入库",timestamp:phone.receivedAt,customer:phone.customer,handledBy:handledBy(phone),inboundCode:inboundCode(phone),boxNumber:boxNumber(phone),outboundCode:"",imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:1,phone});
+    if((!customer||phone.customer===customer)&&phone.status===STATUS.SHIPPED&&dateKey(phone.shippedAt)===date)events.push({type:"扫码出库",timestamp:phone.shippedAt,customer:phone.customer,handledBy:handledBy(phone),inboundCode:inboundCode(phone),boxNumber:boxNumber(phone),outboundCode:outboundCode(phone),imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:-1,phone});
   }
   const labels={initial:"期初库存",increase:"手动增加",decrease:"手动减少"};
   for(const item of adjustments){
     if((!customer||item.customer===customer)&&dateKey(item.createdAt)===date){
       const quantity=Number(item.quantity)||0;
-      events.push({...item,type:labels[item.type]||item.type,timestamp:item.createdAt,inboundCode:"",boxNumber:"",outboundCode:"",imei:"",quantity,delta:item.type==="decrease"?-quantity:quantity});
+      events.push({...item,type:labels[item.type]||item.type,timestamp:item.createdAt,handledBy:"",inboundCode:"",boxNumber:"",outboundCode:"",imei:"",quantity,delta:item.type==="decrease"?-quantity:quantity});
     }
   }
   return events.sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp)));
@@ -383,7 +388,7 @@ function renderInventory() {
     const count=type=>displayedInventoryRows.filter(item=>item.type===type).reduce((sum,item)=>sum+item.quantity,0);
     const received=count("扫码入库"),shipped=count("扫码出库"),added=count("期初库存")+count("手动增加"),reduced=count("手动减少"),net=displayedInventoryRows.reduce((sum,item)=>sum+item.delta,0);
     $("#dailyReceivedCount").textContent=received;$("#dailyShippedCount").textContent=shipped;$("#dailyAddedCount").textContent=added;$("#dailyReducedCount").textContent=reduced;$("#dailyNetCount").textContent=net>0?`+${net}`:net;
-    table.innerHTML=displayedInventoryRows.length?`<table><thead><tr><th>操作</th><th>时间</th><th>客户</th><th>手机</th><th>入库码</th><th>箱号</th><th>出库码</th><th>IMEI</th><th>数量</th><th>备注</th></tr></thead><tbody>${displayedInventoryRows.map(item=>`<tr><td><span class="tag ${item.type.includes("出库")||item.type.includes("减少")?"shipped":""}">${escapeHtml(item.type)}</span></td><td>${escapeHtml(formatDate(item.timestamp))}</td><td><b>${escapeHtml(item.customer)}</b></td><td>${phoneBadge(item)}</td><td>${escapeHtml(inboundCode(item))}</td><td>${escapeHtml(boxNumber(item))}</td><td>${escapeHtml(outboundCode(item))}</td><td>${escapeHtml(item.imei||"")}</td><td>${item.delta<0?"−":"+"}${item.quantity}</td><td>${escapeHtml(item.note||"")}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">所选日期没有符合条件的出入库记录</div>';
+    table.innerHTML=displayedInventoryRows.length?`<table><thead><tr><th>操作</th><th>时间</th><th>客户</th><th>经手人</th><th>手机</th><th>入库码</th><th>箱号</th><th>出库码</th><th>IMEI</th><th>数量</th><th>备注</th></tr></thead><tbody>${displayedInventoryRows.map(item=>`<tr><td><span class="tag ${item.type.includes("出库")||item.type.includes("减少")?"shipped":""}">${escapeHtml(item.type)}</span></td><td>${escapeHtml(formatDate(item.timestamp))}</td><td><b>${escapeHtml(item.customer)}</b></td><td>${escapeHtml(handledBy(item))}</td><td>${phoneBadge(item)}</td><td>${escapeHtml(inboundCode(item))}</td><td>${escapeHtml(boxNumber(item))}</td><td>${escapeHtml(outboundCode(item))}</td><td>${escapeHtml(item.imei||"")}</td><td>${item.delta<0?"−":"+"}${item.quantity}</td><td>${escapeHtml(item.note||"")}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">所选日期没有符合条件的出入库记录</div>';
   }else{
     title.textContent="全部逐台历史";help.textContent="同时显示当前在库和已出库手机；手机出库后记录不会删除。";
     const customerPhones=phones.filter(phone=>!customer||phone.customer===customer);
@@ -442,19 +447,19 @@ function render() {
 }
 
 async function receivePhone() {
-  const customer=$("#receiveCustomer").value,code=$("#inboundCode").value.trim(),boxNumberValue=$("#boxNumber").value.trim(),imei=$("#imei").value.trim(),upc=$("#upc").value.trim(),message=$("#message");
+  const customer=$("#receiveCustomer").value,code=$("#inboundCode").value.trim(),boxNumberValue=$("#boxNumber").value.trim(),handler=$("#handledBy").value.trim(),imei=$("#imei").value.trim(),upc=$("#upc").value.trim(),message=$("#message");
   if(!customer){message.textContent="⚠️ 请先选择客户";$("#imei").focus();return;}
-  if(!imei||!upc){message.textContent="⚠️ IMEI 和 UPC 必须扫描；入库码和箱号可以留空";(!imei?$("#imei"):$("#upc")).focus();return;}
+  if(!imei||!upc){message.textContent="⚠️ IMEI 和 UPC 必须扫描；入库码、箱号和经手人可以留空";(!imei?$("#imei"):$("#upc")).focus();return;}
   const duplicateImei=phones.find(phone=>String(phone.imei)===imei);
   if(duplicateImei){showDuplicateImei(duplicateImei);return;}
   const product=products.find(item=>item.upc===upc);
   if(!product){message.textContent="⚠️ UPC 型号库中没有这个代码，请先添加型号";showView("products");$("#pUpc").value=upc;return;}
-  const phone={...product,customer,inboundCode:code,boxNumber:boxNumberValue,outboundCode:"",imei,status:STATUS.IN_STOCK,receivedAt:new Date().toISOString(),shippedAt:""};
+  const phone={...product,customer,inboundCode:code,boxNumber:boxNumberValue,handledBy:handler,outboundCode:"",imei,status:STATUS.IN_STOCK,receivedAt:new Date().toISOString(),shippedAt:""};
   phones.unshift(phone);
   if(await save()){
     ["imei","upc"].forEach(id=>$("#"+id).value="");
     clearImeiError();
-    message.innerHTML=`✅ 入库成功：<b>${escapeHtml(customer)}</b> ${phoneBadge(product)}`;
+    message.innerHTML=`✅ 入库成功：<b>${escapeHtml(customer)}</b>${handler?`｜经手人：<b>${escapeHtml(handler)}</b>`:""} ${phoneBadge(product)}`;
     $("#imei").focus();render();
   } else phones=phones.filter(item=>item!==phone);
 }
@@ -505,7 +510,7 @@ function importCsv(event) {
   reader.readAsText(file);
 }
 
-function detailRows(list) { return [["客户","入库码","箱号","出库码","IMEI","型号","颜色","容量"],...list.map(phone=>[phone.customer,inboundCode(phone),boxNumber(phone),outboundCode(phone),String(phone.imei||""),phone.model,phone.color,phone.capacity])]; }
+function detailRows(list) { return [["客户","经手人","入库码","箱号","出库码","IMEI","型号","颜色","容量"],...list.map(phone=>[phone.customer,handledBy(phone),inboundCode(phone),boxNumber(phone),outboundCode(phone),String(phone.imei||""),phone.model,phone.color,phone.capacity])]; }
 function truncateSheetName(value,length){return Array.from(value).slice(0,length).join("");}
 function uniqueSheetName(value,used){
   let base=String(value||"未命名客户").replace(/[\\\/:*?\[\]]/g,"_").replace(/^'+|'+$/g,"").trim()||"未命名客户";
@@ -549,7 +554,7 @@ async function exportTodayByInboundCode(){
     const summary=group.configurations;
     return{
       name:uniqueSheetName(`${group.customer}_${group.code}`,used),
-      rows:[["日期",today],["客户",group.customer],["入库码",group.code],["总台数",group.phones.length],[],["型号","颜色","容量","数量"],...summary.map(item=>[item.model,item.color,item.capacity,item.quantity])]
+      rows:[["日期",today],["客户",group.customer],["入库码",group.code],["经手人",uniqueSorted(group.phones.map(handledBy)).join("、")],["总台数",group.phones.length],[],["型号","颜色","容量","数量"],...summary.map(item=>[item.model,item.color,item.capacity,item.quantity])]
     };
   });
   $("#exportMenu").removeAttribute("open");
@@ -564,14 +569,14 @@ async function exportInventoryCurrent(){
     await writeXlsx(rows,"当前库存汇总",`${customer}_当前库存汇总_${dateKey()}.xlsx`);return;
   }
   if(mode==="history"){
-    const rows=[["客户","入库码","箱号","出库码","IMEI","型号","颜色","容量","状态","入库时间","出库时间"],...displayedInventoryRows.map(item=>[item.customer,inboundCode(item),boxNumber(item),outboundCode(item),String(item.imei||""),item.model,item.color,item.capacity,item.status,formatDate(item.receivedAt),item.status===STATUS.SHIPPED?formatDate(item.shippedAt):""])];
+    const rows=[["客户","经手人","入库码","箱号","出库码","IMEI","型号","颜色","容量","状态","入库时间","出库时间"],...displayedInventoryRows.map(item=>[item.customer,handledBy(item),inboundCode(item),boxNumber(item),outboundCode(item),String(item.imei||""),item.model,item.color,item.capacity,item.status,formatDate(item.receivedAt),item.status===STATUS.SHIPPED?formatDate(item.shippedAt):""])];
     await writeXlsx(rows,"全部逐台历史",`${customer}_逐台历史_${dateKey()}.xlsx`);return;
   }
   const chosenDate=mode==="today"?dateKey():($("#inventoryDate").value||dateKey());
   const events=displayedInventoryRows;
   const total=type=>events.filter(item=>item.type===type).reduce((sum,item)=>sum+item.quantity,0);
   const summaryRows=[["日期","客户范围","搜索条件","扫码入库","扫码出库","期初库存","手动增加","手动减少","净变化"],[chosenDate,customer,query,total("扫码入库"),total("扫码出库"),total("期初库存"),total("手动增加"),total("手动减少"),events.reduce((sum,item)=>sum+item.delta,0)]];
-  const phoneRows=list=>[["客户","入库码","箱号","出库码","IMEI","型号","颜色","容量","时间"],...list.map(item=>[item.customer,inboundCode(item),boxNumber(item),outboundCode(item),String(item.imei||""),item.model,item.color,item.capacity,formatDate(item.timestamp)])];
+  const phoneRows=list=>[["客户","经手人","入库码","箱号","出库码","IMEI","型号","颜色","容量","时间"],...list.map(item=>[item.customer,handledBy(item),inboundCode(item),boxNumber(item),outboundCode(item),String(item.imei||""),item.model,item.color,item.capacity,formatDate(item.timestamp)])];
   const adjustmentRows=[["时间","客户","型号","颜色","容量","操作","数量","备注"],...events.filter(item=>!["扫码入库","扫码出库"].includes(item.type)).map(item=>[formatDate(item.timestamp),item.customer,item.model,item.color,item.capacity,item.type,item.quantity,item.note||""])];
   await writeWorkbook([{name:"当日汇总",rows:summaryRows},{name:"扫码入库明细",rows:phoneRows(events.filter(item=>item.type==="扫码入库"))},{name:"扫码出库明细",rows:phoneRows(events.filter(item=>item.type==="扫码出库"))},{name:"手动调整",rows:adjustmentRows}],`${customer}_${chosenDate}_出入库.xlsx`);
 }
@@ -618,7 +623,8 @@ function bind(){
   window.addEventListener("resize",resizeDynamicTables);
   $$('nav button').forEach(button=>button.onclick=()=>showView(button.dataset.view));
   $("#inboundCode").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();$("#boxNumber").focus();}};
-  $("#boxNumber").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();$("#imei").focus();}};
+  $("#boxNumber").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();$("#handledBy").focus();}};
+  $("#handledBy").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();$("#imei").focus();}};
   $("#imei").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();validateImeiBeforeUpc();}};
   $("#imei").oninput=()=>{if($("#imei").classList.contains("input-error")){clearImeiError();$("#message").textContent="正在读取新的 IMEI…";}};
   $("#upc").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();receivePhone();}};
@@ -640,7 +646,7 @@ function bind(){
   ["#pLabelBg","#pLabelText"].forEach(id=>$(id).oninput=()=>{productColorsCustomized=true;updateProductColorPreview();});
   $("#exportInStockDetails").onclick=exportInStockDetails;$("#exportInventoryCurrent").onclick=exportInventoryCurrent;$("#exportCustomerShippedToday").onclick=exportShippedToday;
   $("#batchCustomerFilter").onchange=renderTodayBatches;$("#batchInboundFilter").onchange=renderTodayBatches;$("#batchSearch").oninput=renderTodayBatches;$("#exportTodayBatches").onclick=exportTodayByInboundCode;
-  $("#receiveCustomer").onchange=()=>{clearImeiError();$("#message").textContent=$("#receiveCustomer").value?"入库码和箱号会保持；请连续扫描 IMEI 与 UPC":"请先选择客户";$("#imei").focus();};
+  $("#receiveCustomer").onchange=()=>{clearImeiError();$("#message").textContent=$("#receiveCustomer").value?"入库码、箱号和经手人会保持；请连续扫描 IMEI 与 UPC":"请先选择客户";$("#imei").focus();};
   $("#addCustomer").onclick=addCustomer;$("#newCustomer").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();addCustomer();}};
   $("#importData").onclick=importData;$("#backupData").onclick=backupData;$("#exportDailyLedger").onclick=exportDailyLedger;$("#exportTodayByInboundCode").onclick=exportTodayByInboundCode;$("#resetData").onclick=resetData;
 }

@@ -8,10 +8,10 @@
 /* V3.0：手机颜色标签与 UPC 自定义配色。 */
 
 /* V3.6：入库码、箱号和 IMEI/UPC 批量循环扫码布局。 */
-.scan-grid.five{grid-template-columns:repeat(6,minmax(0,1fr));align-items:end}
-.scan-grid.five .scan-customer,.scan-grid.five .scan-inbound,.scan-grid.five .scan-box{grid-column:span 2}
-.scan-grid.five .scan-imei,.scan-grid.five .scan-upc{grid-column:span 3}
-@media(max-width:1000px){.scan-grid.five{grid-template-columns:repeat(2,minmax(0,1fr))}.scan-grid.five .scan-customer,.scan-grid.five .scan-inbound,.scan-grid.five .scan-box,.scan-grid.five .scan-imei,.scan-grid.five .scan-upc{grid-column:span 1}}
+.scan-grid.five{grid-template-columns:repeat(8,minmax(0,1fr));align-items:end}
+.scan-grid.five .scan-customer,.scan-grid.five .scan-inbound,.scan-grid.five .scan-box,.scan-grid.five .scan-handler{grid-column:span 2}
+.scan-grid.five .scan-imei,.scan-grid.five .scan-upc{grid-column:span 4}
+@media(max-width:1000px){.scan-grid.five{grid-template-columns:repeat(2,minmax(0,1fr))}.scan-grid.five .scan-customer,.scan-grid.five .scan-inbound,.scan-grid.five .scan-box,.scan-grid.five .scan-handler,.scan-grid.five .scan-imei,.scan-grid.five .scan-upc{grid-column:span 1}}
 @media(max-width:850px){.scan-grid.five{grid-template-columns:1fr}}
 .tag.shipped{background:#eef0f4;color:#596579}.row{align-items:center;gap:10px}#productForm{grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;align-items:end}.color-field{font-size:12px;color:var(--muted)}.color-field input[type=color]{height:44px;margin-top:6px;padding:4px;cursor:pointer}.phone-badge{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 10px;border:1px solid #14213d24;border-radius:9px;background:var(--phone-bg,#e7efff);color:var(--phone-text,#17315f);vertical-align:middle;white-space:nowrap}.phone-badge span{color:inherit;opacity:.82}.color-code{font-family:Consolas,monospace;color:var(--muted)}.history-help{margin:-8px 0 16px}.product-edit{min-height:32px!important;padding:6px 10px!important}@media(max-width:1200px){#productForm{grid-template-columns:1fr 1fr}}@media(max-width:850px){#productForm{grid-template-columns:1fr}}
 

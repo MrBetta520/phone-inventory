@@ -82,7 +82,7 @@
 </aside>
 <main>
   <header class="page-header">
-    <div><h1 id="title">入库扫码</h1><p id="subtitle">入库码和箱号选填并保持；IMEI 与 UPC 连续循环扫描</p></div>
+    <div><h1 id="title">入库扫码</h1><p id="subtitle">入库码、箱号和经手人选填并保持；IMEI 与 UPC 连续循环扫描</p></div>
     <button id="exportInStockDetails">导出全部在库明细</button>
   </header>
   <section class="metrics">
@@ -99,6 +99,7 @@
         <label class="scan-customer"><b>客户</b><select id="receiveCustomer"><option value="">请选择客户</option></select></label>
         <label class="scan-inbound"><b>入库码（选填，手动输入）</b><input id="inboundCode" placeholder="可留空；填写后用于本批次" autocomplete="off"></label>
         <label class="scan-box"><b>箱号（选填，手动输入）</b><input id="boxNumber" placeholder="可留空；填写后用于本箱" autocomplete="off"></label>
+        <label class="scan-handler"><b>经手人（选填，手动输入）</b><input id="handledBy" placeholder="填写本次扫码经手人" autocomplete="off"></label>
         <label class="scan-imei"><b>1 手机 IMEI（必填且唯一）</b><input id="imei" placeholder="扫描 IMEI 条码" autocomplete="off"></label>
         <label class="scan-upc"><b>2 手机 UPC</b><input id="upc" placeholder="扫描 UPC 自动识别" autocomplete="off"></label>
       </div>
@@ -111,7 +112,7 @@
     <div class="card batch-controls">
       <label>客户<select id="batchCustomerFilter"><option value="">全部客户</option></select></label>
       <label>入库码<select id="batchInboundFilter"><option value="">今天还没有入库码</option></select></label>
-      <label class="batch-search">搜索<input id="batchSearch" placeholder="搜索箱号、IMEI、型号、颜色、容量…"></label>
+      <label class="batch-search">搜索<input id="batchSearch" placeholder="搜索箱号、经手人、IMEI、型号、颜色、容量…"></label>
       <button id="exportTodayBatches">导出今日按入库码汇总</button>
     </div>
     <div class="card">

@@ -1,11 +1,11 @@
 "use strict";
 
 (() => {
-  const manualInputIds=["inboundCode","boxNumber","outboundCode","newCustomer","pUpc","pModel","pColor","pCapacity","adjustQuantity","adjustNote"];
+  const manualInputIds=["inboundCode","boxNumber","handledBy","outboundCode","newCustomer","pUpc","pModel","pColor","pCapacity","adjustQuantity","adjustNote"];
   const eligibleSelector=manualInputIds.map(id=>`#${id}`).join(",");
   const numericIds=new Set(["pUpc","adjustQuantity"]);
-  const enterIds=new Set(["inboundCode","boxNumber","outboundCode","newCustomer"]);
-  const nextIds=new Set(["inboundCode","boxNumber"]);
+  const enterIds=new Set(["inboundCode","boxNumber","handledBy","outboundCode","newCustomer"]);
+  const nextIds=new Set(["inboundCode","boxNumber","handledBy"]);
   let activeInput=null;
   let caret=0;
   let layout="letters";

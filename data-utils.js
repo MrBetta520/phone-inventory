@@ -25,8 +25,8 @@
     return rightTime < leftTime ? right : left;
   };
   const normalizePhoneCodes = item => {
-    const normalized={...item,inboundCode:clean(item.inboundCode)||clean(item.tracking),boxNumber:clean(item.boxNumber)||clean(item.boxNo),outboundCode:clean(item.outboundCode)||clean(item.shipCode)};
-    delete normalized.tracking;delete normalized.boxNo;delete normalized.shipCode;
+    const normalized={...item,inboundCode:clean(item.inboundCode)||clean(item.tracking),boxNumber:clean(item.boxNumber)||clean(item.boxNo),outboundCode:clean(item.outboundCode)||clean(item.shipCode),handledBy:clean(item.handledBy)||clean(item.operator)};
+    delete normalized.tracking;delete normalized.boxNo;delete normalized.shipCode;delete normalized.operator;
     return normalized;
   };
 
@@ -83,7 +83,7 @@
 
     const mergedPhones = (source.phones || []).map(item=>({...normalizePhoneCodes(item),imei:clean(item.imei)}));
     const phoneIndex = new Map(mergedPhones.map((item,index)=>[clean(item.imei),index]).filter(([key])=>key));
-    const phoneFields = ["customer","inboundCode","boxNumber","outboundCode","upc","model","color","capacity","status","receivedAt","shippedAt"];
+    const phoneFields = ["customer","handledBy","inboundCode","boxNumber","outboundCode","upc","model","color","capacity","status","receivedAt","shippedAt"];
     for (const imported of addition.phones || []) {
       const key = clean(imported.imei);
       if (!key) continue;
@@ -98,7 +98,7 @@
       if (same(existingValues,incomingValues)) { summary.duplicatePhones++; continue; }
       summary.conflictPhones++;
       const result = {...existing};
-      for (const field of ["customer","inboundCode","boxNumber","outboundCode","upc","model","color","capacity"]) if (!clean(result[field]) && clean(normalized[field])) result[field]=normalized[field];
+      for (const field of ["customer","handledBy","inboundCode","boxNumber","outboundCode","upc","model","color","capacity"]) if (!clean(result[field]) && clean(normalized[field])) result[field]=normalized[field];
       result.receivedAt = earlier(existing.receivedAt,normalized.receivedAt);
       if (existing.status === SHIPPED || normalized.status === SHIPPED) {
         result.status = SHIPPED;
@@ -146,15 +146,15 @@
     const events = [];
     for (const phone of phones || []) {
       const normalized=normalizePhoneCodes(phone);
-      if (phone.receivedAt) events.push({timestamp:phone.receivedAt,type:"扫码入库",customer:phone.customer,inboundCode:normalized.inboundCode,boxNumber:normalized.boxNumber,outboundCode:"",imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:1});
-      if (phone.status === SHIPPED && phone.shippedAt) events.push({timestamp:phone.shippedAt,type:"扫码出库",customer:phone.customer,inboundCode:normalized.inboundCode,boxNumber:normalized.boxNumber,outboundCode:normalized.outboundCode,imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:-1});
+      if (phone.receivedAt) events.push({timestamp:phone.receivedAt,type:"扫码入库",customer:phone.customer,handledBy:normalized.handledBy,inboundCode:normalized.inboundCode,boxNumber:normalized.boxNumber,outboundCode:"",imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:1});
+      if (phone.status === SHIPPED && phone.shippedAt) events.push({timestamp:phone.shippedAt,type:"扫码出库",customer:phone.customer,handledBy:normalized.handledBy,inboundCode:normalized.inboundCode,boxNumber:normalized.boxNumber,outboundCode:normalized.outboundCode,imei:phone.imei,model:phone.model,color:phone.color,capacity:phone.capacity,quantity:1,note:"",delta:-1});
     }
     const labels = {initial:"期初库存",increase:"手动增加",decrease:"手动减少"};
     for (const item of adjustments || []) {
       const quantity=Number(item.quantity)||0;
       let type=labels[item.type]||clean(item.type)||"库存调整";
       if (clean(item.note).startsWith("反向修正：")) type=`反向修正（${item.type==="decrease"?"减少":"增加"}）`;
-      events.push({timestamp:item.createdAt,type,customer:item.customer,inboundCode:"",boxNumber:"",outboundCode:"",imei:"",model:item.model,color:item.color,capacity:item.capacity,quantity,note:item.note||"",delta:item.type==="decrease"?-quantity:quantity});
+      events.push({timestamp:item.createdAt,type,customer:item.customer,handledBy:"",inboundCode:"",boxNumber:"",outboundCode:"",imei:"",model:item.model,color:item.color,capacity:item.capacity,quantity,note:item.note||"",delta:item.type==="decrease"?-quantity:quantity});
     }
     if (!events.length) return [];
     for (const event of events) event.date=localDateKey(event.timestamp);
@@ -181,8 +181,8 @@
     const dates=[...new Set(events.map(event=>event.date))].sort(dateSort);
     for (const date of dates) {
       sheets.push({name:date,rows:[
-        ["操作类型","客户","入库码","箱号","出库码","IMEI","型号","颜色","容量","数量","备注"],
-        ...events.filter(event=>event.date===date).map(event=>[event.type,clean(event.customer)||"未命名客户",clean(event.inboundCode),clean(event.boxNumber),clean(event.outboundCode),clean(event.imei),clean(event.model),clean(event.color),clean(event.capacity),event.quantity,clean(event.note)])
+        ["操作类型","客户","经手人","入库码","箱号","出库码","IMEI","型号","颜色","容量","数量","备注"],
+        ...events.filter(event=>event.date===date).map(event=>[event.type,clean(event.customer)||"未命名客户",clean(event.handledBy),clean(event.inboundCode),clean(event.boxNumber),clean(event.outboundCode),clean(event.imei),clean(event.model),clean(event.color),clean(event.capacity),event.quantity,clean(event.note)])
       ]});
     }
     return sheets;
